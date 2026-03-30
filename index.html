@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net" />
+  <script src="https://cdn.jsdelivr.net"></script>
+</head>
+<body>
+  <div id="terminal"></div>
+  <script>
+    const term = new Terminal();
+    term.open(document.getElementById('terminal'));
+    term.write('Starting Arm64 Linux on Web...\r\n');
+
+    // ここでWebAssembly版QEMUをロードし、Arm64バイナリを実行するロジックを呼ぶ
+    Module.run(['qemu-system-aarch64', '-M', 'virt', '-cpu', 'cortex-a53', ...]);
+  </script>
+</body>
+</html>

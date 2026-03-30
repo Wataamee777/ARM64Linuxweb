@@ -1,18 +1,77 @@
 <!DOCTYPE html>
-<html>
+<html lang="ja">
 <head>
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net" />
-  <script src="https://cdn.jsdelivr.net"></script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Web Linux on Arm64/Web</title>
+    <!-- ターミナルUIライブラリ -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/xterm@5.3.0/css/xterm.min.css" />
+    <script src="https://cdn.jsdelivr.net/npm/xterm@5.3.0/lib/xterm.min.js"></script>
+    <!-- v86エンジン (事前にリポジトリに入れておく) -->
+    <script src="libv86.js"></script>
+    <style>
+        body { background: #000; margin: 0; display: flex; flex-direction: column; height: 100vh; }
+        #screen { flex-grow: 1; overflow: hidden; }
+        .controls { background: #222; padding: 10px; display: flex; gap: 5px; flex-wrap: wrap; }
+        button { padding: 8px 12px; background: #444; color: #fff; border: none; border-radius: 4px; cursor: pointer; }
+        button:active { background: #666; }
+    </style>
 </head>
 <body>
-  <div id="terminal"></div>
-  <script>
-    const term = new Terminal();
-    term.open(document.getElementById('terminal'));
-    term.write('Starting Arm64 Linux on Web...\r\n');
 
-    // ここでWebAssembly版QEMUをロードし、Arm64バイナリを実行するロジックを呼ぶ
-    Module.run(['qemu-system-aarch64', '-M', 'virt', '-cpu', 'cortex-a53', ...]);
-  </script>
+    <!-- エミュレーターの表示エリア -->
+    <div id="screen"></div>
+
+    <!-- スマホ用の補助ボタン (CtrlやTabなど) -->
+    <div class="controls">
+        <button onclick="sendKey(9)">Tab</button>
+        <button onclick="sendKey(27)">Esc</button>
+        <button onclick="sendCtrl()">Ctrl</button>
+        <button onclick="saveState()">Save State</button>
+    </div>
+
+    <script>
+        // v86の初期化
+        var emulator = new V86Starter({
+            wasm_path: "./v86.wasm",
+            memory_size: 128 * 1024 * 1024, // 128MB
+            vga_canvas: document.createElement("canvas"), // グラフィック不要な場合は隠す
+            bios: { url: "./bios.bin" },
+            vgabios: { url: "./vgabios.bin" },
+            cdrom: { url: "./alpine.iso" }, // あなたの89MBのファイル名
+            autostart: true,
+        });
+
+        // xterm.jsの設定 (テキストベースの表示)
+        const term = new Terminal({ cursorBlink: true, theme: { background: '#000' } });
+        term.open(document.getElementById('screen'));
+
+        // v86の出力をxterm.jsに送る
+        emulator.add_listener("serial0-output-char", function(char) {
+            term.write(char);
+        });
+
+        // xterm.jsの入力をv86に送る
+        term.onData(data => {
+            emulator.serial0_send(data);
+        });
+
+        // 補助ボタン用関数
+        function sendKey(code) {
+            // キーコード送信ロジック（簡易版）
+        }
+
+        function saveState() {
+            emulator.save_state(function(err, res) {
+                if(err) return console.error(err);
+                const blob = new Blob([res], {type: "application/octet-stream"});
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement("a");
+                a.href = url;
+                a.download = "v86state.bin";
+                a.click();
+            });
+        }
+    </script>
 </body>
 </html>
